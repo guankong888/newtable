@@ -7,9 +7,6 @@ AIRTABLE_BASE_ID = "appJrWoXe5H2YZnmU"  # Correct Base ID
 AIRTABLE_API_KEY = "patkcqbpm4M0Z7WTg.676db3c4059059a9f74e2714bced3e09fbacabe05bb17bfa7b29aa792b9a80e0"
 SOURCE_TABLE_ID = "tblZnkmYCBPNzv6rO"  # Confirmed Table ID for "Template"
 
-# Columns to Exclude Values From (Headers will still be copied)
-EXCLUDED_COLUMNS = ["MF/FAIRE Order", "N2G Water", "SUPP RESTOCK", "Notes", "Last Modified By"]
-
 # Airtable API URLs
 TABLES_API_URL = f"https://api.airtable.com/v0/meta/bases/{AIRTABLE_BASE_ID}/tables"
 
@@ -40,10 +37,13 @@ def get_table_schema():
                         "name": field["name"],
                         "type": field["type"]
                     }
-                    # Add options if they exist (e.g., for singleSelect, multipleSelect, etc.)
-                    if "options" in field:
-                        field_schema["options"] = field["options"]
-                    
+
+                    # **Fix: Remove immutable IDs from select fields**
+                    if field["type"] in ["singleSelect", "multipleSelect"] and "options" in field:
+                        choices = field["options"].get("choices", [])
+                        clean_choices = [{"name": choice["name"]} for choice in choices]  # Remove IDs
+                        field_schema["options"] = {"choices": clean_choices}
+
                     fields.append(field_schema)
                 return fields
         print("❌ Table ID not found in base!")
