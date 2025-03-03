@@ -14,12 +14,14 @@ HEADERS = {
 }
 
 def list_tables():
-    """Retrieve all tables in the base to confirm Table ID."""
+    """Retrieve and display only Table Names and Table IDs."""
     response = requests.get(TABLES_API_URL, headers=HEADERS)
 
     if response.status_code == 200:
-        tables = response.json()
-        print("✅ Available Tables:", tables)
+        tables = response.json().get("tables", [])
+        print("\n✅ Available Tables in Base:")
+        for table in tables:
+            print(f"- 📌 Table Name: {table['name']} | Table ID: {table['id']}")
     else:
         print(f"❌ Error: {response.status_code}, {response.text}")
 
