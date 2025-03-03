@@ -1,12 +1,11 @@
 import requests
 
 # Airtable API Credentials
-AIRTABLE_BASE_ID = "appJrWoXe5H2YZnmU"  # Correct Base ID
+AIRTABLE_BASE_ID = "appJrWoXe5H2YZnmU"  # Your Base ID
 AIRTABLE_API_KEY = "patkcqbpm4M0Z7WTg.676db3c4059059a9f74e2714bced3e09fbacabe05bb17bfa7b29aa792b9a80e0"
-SOURCE_TABLE_ID = "tblZnkmYCBPNzv6rO"  # Correct Table ID for "Template"
 
-# Airtable API URL (Using Table ID Instead of Name)
-AIRTABLE_URL = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{SOURCE_TABLE_ID}"
+# API URL for Creating Tables (Meta API)
+AIRTABLE_URL = f"https://api.airtable.com/v0/meta/bases/{AIRTABLE_BASE_ID}/tables"
 
 # Headers for authentication
 HEADERS = {
@@ -14,14 +13,21 @@ HEADERS = {
     "Content-Type": "application/json"
 }
 
-def test_table_access():
-    """Check if API Key can access the table using Table ID."""
-    response = requests.get(AIRTABLE_URL, headers=HEADERS)
+def create_test_table():
+    """Attempt to create a test table."""
+    payload = {
+        "name": "TestTableCreation",
+        "fields": [
+            {"name": "TestField1", "type": "singleLineText"},
+            {"name": "TestField2", "type": "number"}
+        ]
+    }
+
+    response = requests.post(AIRTABLE_URL, json=payload, headers=HEADERS)
 
     if response.status_code == 200:
-        print("✅ API Key can access 'Template' using Table ID. Sample Data:")
-        print(response.json())
+        print("✅ Successfully created table: TestTableCreation")
     else:
-        print(f"❌ Error: {response.status_code}, {response.text}")
+        print(f"❌ Error creating table: {response.status_code}, {response.text}")
 
-test_table_access()
+create_test_table()
