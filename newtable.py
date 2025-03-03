@@ -27,7 +27,7 @@ def generate_table_name():
     return f"{monday.strftime('%m/%d')}-{sunday.strftime('%m/%d/%Y')} Test"
 
 def get_table_structure():
-    """Retrieve all column names from the 'Template' table."""
+    """Retrieve full structure including all column names from the 'Template' table."""
     url = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{SOURCE_TABLE_ID}"
     response = requests.get(url, headers=HEADERS)
 
@@ -44,6 +44,22 @@ def get_table_structure():
     else:
         print(f"❌ Error fetching table structure: {response.status_code}, {response.text}")
         return []
+
+def get_view_settings():
+    """Retrieve grid view & grouping settings from the 'Template' table."""
+    url = f"https://api.airtable.com/v0/meta/bases/{AIRTABLE_BASE_ID}/tables/{SOURCE_TABLE_ID}/views"
+    response = requests.get(url, headers=HEADERS)
+
+    if response.status_code == 200:
+        views = response.json().get("views", [])
+        if views:
+            return views[0]  # Assuming first view is the default grid view
+        else:
+            print("⚠️ No views found in 'Template'. Using default settings.")
+            return None
+    else:
+        print(f"⚠️ Could not fetch view settings: {response.status_code}, {response.text}")
+        return None
 
 def create_new_table():
     """Create a new table with the same structure as 'Template' and retrieve its ID."""
@@ -93,7 +109,7 @@ def populate_table(new_table_id):
     
     for record in records:
         new_record_fields = {}
-        
+
         for field_name, field_value in record["fields"].items():
             if field_name in EXCLUDED_COLUMNS:
                 new_record_fields[field_name] = ""  # Keep header, remove values
