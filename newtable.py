@@ -1,13 +1,12 @@
 import requests
 import datetime
-import time
 
 # Airtable API Credentials
 AIRTABLE_BASE_ID = "appJrWoXe5H2YZnmU"  # Correct Base ID
 AIRTABLE_API_KEY = "patkcqbpm4M0Z7WTg.676db3c4059059a9f74e2714bced3e09fbacabe05bb17bfa7b29aa792b9a80e0"
 SOURCE_TABLE_ID = "tblZnkmYCBPNzv6rO"  # Confirmed Table ID for "Template"
 
-# Airtable API URLs
+# Airtable API URL
 TABLES_API_URL = f"https://api.airtable.com/v0/meta/bases/{AIRTABLE_BASE_ID}/tables"
 
 # Headers for authentication
@@ -24,7 +23,7 @@ def generate_table_name():
     return f"{monday.strftime('%m/%d')}-{sunday.strftime('%m/%d/%Y')} Test"
 
 def get_table_schema():
-    """Retrieve full schema including correct field types & options from the 'Template' table."""
+    """Retrieve field types & options from the 'Template' table."""
     response = requests.get(TABLES_API_URL, headers=HEADERS)
 
     if response.status_code == 200:
@@ -38,11 +37,27 @@ def get_table_schema():
                         "type": field["type"]
                     }
 
-                    # **Fix: Remove immutable IDs from select fields**
+                    # **Handle different field types**
                     if field["type"] in ["singleSelect", "multipleSelect"] and "options" in field:
                         choices = field["options"].get("choices", [])
-                        clean_choices = [{"name": choice["name"]} for choice in choices]  # Remove IDs
-                        field_schema["options"] = {"choices": clean_choices}
+                        field_schema["options"] = {
+                            "choices": [{"name": choice["name"]} for choice in choices]  # Remove IDs
+                        }
+
+                    elif field["type"] == "number":
+                        field_schema["options"] = {"precision": field["options"].get("precision", 1)}
+
+                    elif field["type"] == "currency":
+                        field_schema["options"] = {
+                            "precision": field["options"].get("precision", 2),
+                            "symbol": field["options"].get("symbol", "$")
+                        }
+
+                    elif field["type"] == "rating":
+                        field_schema["options"] = {"max": field["options"].get("max", 5)}
+
+                    elif field["type"] == "checkbox":
+                        field_schema["options"] = {"icon": "check"}
 
                     fields.append(field_schema)
                 return fields
