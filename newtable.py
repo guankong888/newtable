@@ -1,5 +1,6 @@
 import requests
 import datetime
+import time
 
 # Airtable API Credentials
 AIRTABLE_BASE_ID = "appJrWoXe5H2YZnmU"  # Correct Base ID
@@ -10,7 +11,7 @@ SOURCE_TABLE_ID = "tblZnkmYCBPNzv6rO"  # Table ID for "Template"
 EXCLUDED_COLUMNS = ["MF/FAIRE Order", "N2G Water", "SUPP RESTOCK", "Notes"]
 
 # Airtable API URL
-AIRTABLE_URL = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}"
+AIRTABLE_URL = f"https://api.airtable.com/v0/meta/bases/{AIRTABLE_BASE_ID}/tables"
 
 # Headers for authentication
 HEADERS = {
@@ -27,7 +28,7 @@ def generate_table_name():
 
 def get_table_structure():
     """Retrieve all column names from the 'Template' table."""
-    url = f"{AIRTABLE_URL}/{SOURCE_TABLE_ID}"
+    url = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{SOURCE_TABLE_ID}"
     response = requests.get(url, headers=HEADERS)
 
     if response.status_code == 200:
@@ -45,13 +46,13 @@ def get_table_structure():
         return []
 
 def create_new_table():
-    """Create a new table with the same structure as 'Template' but exclude specific columns from duplication."""
+    """Create a new table with the same structure as 'Template' and retrieve its ID."""
     new_table_name = generate_table_name()
     fields = get_table_structure()
 
     if not fields:
         print("❌ No fields found. Table creation aborted.")
-        return
+        return None
 
     url = f"https://api.airtable.com/v0/meta/bases/{AIRTABLE_BASE_ID}/tables"
     payload = {
@@ -63,13 +64,15 @@ def create_new_table():
 
     if response.status_code == 200:
         print(f"✅ Successfully created table: {new_table_name} with Template structure")
-        populate_table(new_table_name)  # Call function to duplicate records
+        new_table_id = response.json().get("id")  # Retrieve the new table ID
+        return new_table_id
     else:
         print(f"❌ Error creating table: {response.status_code}, {response.text}")
+        return None
 
 def get_table_records():
     """Retrieve all records from the 'Template' table."""
-    url = f"{AIRTABLE_URL}/{SOURCE_TABLE_ID}"
+    url = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{SOURCE_TABLE_ID}"
     response = requests.get(url, headers=HEADERS)
 
     if response.status_code == 200:
@@ -78,7 +81,7 @@ def get_table_records():
         print(f"❌ Error fetching records: {response.status_code}, {response.text}")
         return []
 
-def populate_table(new_table_name):
+def populate_table(new_table_id):
     """Duplicate all records from 'Template' to the newly created table while excluding specified columns."""
     records = get_table_records()
 
@@ -99,15 +102,17 @@ def populate_table(new_table_name):
                 
         new_records.append({"fields": new_record_fields})
 
-    url = f"{AIRTABLE_URL}/{new_table_name}"
+    url = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{new_table_id}"  # Use the new Table ID
     payload = {"records": new_records}
 
     response = requests.post(url, json=payload, headers=HEADERS)
 
     if response.status_code == 200:
-        print(f"✅ Successfully populated table: {new_table_name}")
+        print(f"✅ Successfully populated table: {new_table_id}")
     else:
         print(f"❌ Error inserting records: {response.status_code}, {response.text}")
 
-# Run the script to create and populate the table
-create_new_table()
+# Run the script
+new_table_id = create_new_table()
+if new_table_id:
+    populate_table(new_table_id)
