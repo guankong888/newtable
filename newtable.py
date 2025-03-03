@@ -3,7 +3,7 @@ import requests
 # Airtable API Credentials
 AIRTABLE_BASE_ID = "appJrWoXe5H2YZnmU"  # Correct Airtable Base ID
 AIRTABLE_API_KEY = "patNrsSsWF1NpOExt.7d405eb26f24695e8cb633bc7d61d057416e01e731dc872e108b3bc7f37fc5ab"
-SOURCE_TABLE_NAME = "Records"  # Table to duplicate
+SOURCE_TABLE_NAME = "Template"  # Table to duplicate
 TEST_TABLE_NAME = "Test"  # Fixed name for testing
 
 # Airtable API URL
