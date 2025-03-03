@@ -44,15 +44,17 @@ def get_table_schema():
                     # **Fix: Ensure Select Fields Retain Colors from Template**
                     if field["type"] in ["singleSelect", "multipleSelect"] and "options" in field:
                         choices = field["options"].get("choices", [])
-                        field_schema["options"] = {
-                            "choices": [
-                                {
+                        
+                        # **Ensure choices array is not empty**
+                        if choices:
+                            updated_choices = []
+                            for choice in choices:
+                                choice_color = choice.get("color", DEFAULT_COLOR)
+                                updated_choices.append({
                                     "name": choice["name"],
-                                    "color": choice["color"] if "color" in choice else DEFAULT_COLOR
-                                }
-                                for choice in choices
-                            ]
-                        }
+                                    "color": choice_color
+                                })
+                            field_schema["options"] = {"choices": updated_choices}
 
                     # Handle other field types
                     elif field["type"] == "number":
