@@ -10,8 +10,9 @@ SOURCE_TABLE_ID = "tblZnkmYCBPNzv6rO"  # Table ID for "Template"
 # Columns to Exclude Values From (Headers will still be copied)
 EXCLUDED_COLUMNS = ["MF/FAIRE Order", "N2G Water", "SUPP RESTOCK", "Notes", "Last Modified By"]
 
-# Airtable API URL
-AIRTABLE_URL = f"https://api.airtable.com/v0/meta/bases/{AIRTABLE_BASE_ID}/tables"
+# Airtable API URLs
+TABLES_API_URL = f"https://api.airtable.com/v0/meta/bases/{AIRTABLE_BASE_ID}/tables"
+VIEWS_API_URL = f"https://api.airtable.com/v0/meta/bases/{AIRTABLE_BASE_ID}/tables/{SOURCE_TABLE_ID}/views"
 
 # Headers for authentication
 HEADERS = {
@@ -26,29 +27,24 @@ def generate_table_name():
     sunday = monday + datetime.timedelta(days=6)  # Get Sunday of the same week
     return f"{monday.strftime('%m/%d')}-{sunday.strftime('%m/%d/%Y')} Test"
 
-def get_table_structure():
-    """Retrieve full structure including all column names from the 'Template' table."""
-    url = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{SOURCE_TABLE_ID}"
+def get_table_schema():
+    """Retrieve full schema including correct field types from the 'Template' table."""
+    url = f"https://api.airtable.com/v0/meta/bases/{AIRTABLE_BASE_ID}/tables/{SOURCE_TABLE_ID}"
     response = requests.get(url, headers=HEADERS)
 
     if response.status_code == 200:
-        records = response.json().get("records", [])
-        if records:
-            fields = []
-            for field_name in records[0]["fields"].keys():
-                fields.append({"name": field_name, "type": "singleLineText"})  # Defaulting all fields to text
-            return fields
-        else:
-            print("❌ No records found in 'Template' table.")
-            return []
+        table_info = response.json()
+        fields = []
+        for field in table_info.get("fields", []):
+            fields.append({"name": field["name"], "type": field["type"]})
+        return fields
     else:
-        print(f"❌ Error fetching table structure: {response.status_code}, {response.text}")
+        print(f"❌ Error fetching table schema: {response.status_code}, {response.text}")
         return []
 
 def get_view_settings():
-    """Retrieve grid view & grouping settings from the 'Template' table."""
-    url = f"https://api.airtable.com/v0/meta/bases/{AIRTABLE_BASE_ID}/tables/{SOURCE_TABLE_ID}/views"
-    response = requests.get(url, headers=HEADERS)
+    """Retrieve grouping, sorting, and view settings from the 'Template' table."""
+    response = requests.get(VIEWS_API_URL, headers=HEADERS)
 
     if response.status_code == 200:
         views = response.json().get("views", [])
@@ -62,24 +58,23 @@ def get_view_settings():
         return None
 
 def create_new_table():
-    """Create a new table with the same structure as 'Template' and retrieve its ID."""
+    """Create a new table with the same schema as 'Template' and retrieve its ID."""
     new_table_name = generate_table_name()
-    fields = get_table_structure()
+    fields = get_table_schema()
 
     if not fields:
         print("❌ No fields found. Table creation aborted.")
         return None
 
-    url = f"https://api.airtable.com/v0/meta/bases/{AIRTABLE_BASE_ID}/tables"
     payload = {
         "name": new_table_name,
         "fields": fields
     }
 
-    response = requests.post(url, json=payload, headers=HEADERS)
+    response = requests.post(TABLES_API_URL, json=payload, headers=HEADERS)
 
     if response.status_code == 200:
-        print(f"✅ Successfully created table: {new_table_name} with Template structure")
+        print(f"✅ Successfully created table: {new_table_name} with correct field types")
         new_table_id = response.json().get("id")  # Retrieve the new table ID
         return new_table_id
     else:
@@ -132,7 +127,32 @@ def populate_table(new_table_id):
         else:
             print(f"❌ Error inserting batch {i // batch_size + 1}: {response.status_code}, {response.text}")
 
+def apply_view_settings(new_table_id):
+    """Apply grouping and sorting from 'Template' to the new table."""
+    view_settings = get_view_settings()
+    if not view_settings:
+        print("⚠️ No view settings applied.")
+        return
+
+    view_payload = {
+        "name": view_settings.get("name", "Grid view"),
+        "fields": view_settings.get("fields", []),
+        "grouping": view_settings.get("grouping", []),
+        "sorting": view_settings.get("sorting", []),
+        "layout": view_settings.get("layout", "grid"),
+    }
+
+    url = f"https://api.airtable.com/v0/meta/bases/{AIRTABLE_BASE_ID}/tables/{new_table_id}/views"
+
+    response = requests.post(url, json=view_payload, headers=HEADERS)
+
+    if response.status_code == 200:
+        print(f"✅ Applied view settings from Template to new table: {new_table_id}")
+    else:
+        print(f"❌ Error applying view settings: {response.status_code}, {response.text}")
+
 # Run the script
 new_table_id = create_new_table()
 if new_table_id:
     populate_table(new_table_id)
+    apply_view_settings(new_table_id)
