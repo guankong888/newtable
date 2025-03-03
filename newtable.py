@@ -15,6 +15,9 @@ HEADERS = {
     "Content-Type": "application/json"
 }
 
+# Default color fallback
+DEFAULT_COLOR = "blueLight"
+
 def generate_table_name():
     """Generate table name in MM/DD-MM/DD/YYYY format for the current Monday and append 'Test'."""
     today = datetime.date.today()
@@ -45,8 +48,8 @@ def get_table_schema():
                             "choices": [
                                 {
                                     "name": choice["name"],
-                                    "color": choice["color"] if "color" in choice else "blueLight"
-                                } 
+                                    "color": choice.get("color", DEFAULT_COLOR)  # Ensure all choices have a color
+                                }
                                 for choice in choices
                             ]
                         }
@@ -107,4 +110,3 @@ def create_new_table():
 
 # Run the script
 new_table_id = create_new_table()
-
