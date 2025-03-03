@@ -98,5 +98,4 @@ def create_new_table():
         print(f"❌ Error creating table: {response.status_code}, {response.text}")
         return None
 
-# Run the script
-new_table_id = create_new_table()
+
