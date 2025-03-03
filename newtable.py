@@ -14,12 +14,12 @@ HEADERS = {
 }
 
 def create_test_table():
-    """Attempt to create a test table."""
+    """Attempt to create a test table with correct schema."""
     payload = {
         "name": "TestTableCreation",
         "fields": [
             {"name": "TestField1", "type": "singleLineText"},
-            {"name": "TestField2", "type": "number"}
+            {"name": "TestField2", "type": "number", "options": {"precision": 1}}  # Fixed number field
         ]
     }
 
