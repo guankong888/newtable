@@ -6,6 +6,9 @@ AIRTABLE_BASE_ID = "appJrWoXe5H2YZnmU"  # Correct Base ID
 AIRTABLE_API_KEY = "patkcqbpm4M0Z7WTg.676db3c4059059a9f74e2714bced3e09fbacabe05bb17bfa7b29aa792b9a80e0"
 SOURCE_TABLE_ID = "tblZnkmYCBPNzv6rO"  # Table ID for "Template"
 
+# Columns to Exclude Values From (Headers will still be copied)
+EXCLUDED_COLUMNS = ["MF/FAIRE Order", "N2G Water", "SUPP RESTOCK", "Notes"]
+
 # Airtable API URL
 AIRTABLE_URL = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}"
 
@@ -23,7 +26,7 @@ def generate_table_name():
     return f"{monday.strftime('%m/%d')}-{sunday.strftime('%m/%d/%Y')} Test"
 
 def get_table_structure():
-    """Retrieve the structure (field names) from the 'Template' table."""
+    """Retrieve all column names from the 'Template' table."""
     url = f"{AIRTABLE_URL}/{SOURCE_TABLE_ID}"
     response = requests.get(url, headers=HEADERS)
 
@@ -42,7 +45,7 @@ def get_table_structure():
         return []
 
 def create_new_table():
-    """Create a new table with the same structure as 'Template' and use date range in the name."""
+    """Create a new table with the same structure as 'Template' but exclude specific columns from duplication."""
     new_table_name = generate_table_name()
     fields = get_table_structure()
 
@@ -60,8 +63,51 @@ def create_new_table():
 
     if response.status_code == 200:
         print(f"✅ Successfully created table: {new_table_name} with Template structure")
+        populate_table(new_table_name)  # Call function to duplicate records
     else:
         print(f"❌ Error creating table: {response.status_code}, {response.text}")
 
-# Run the script to create a new test table
+def get_table_records():
+    """Retrieve all records from the 'Template' table."""
+    url = f"{AIRTABLE_URL}/{SOURCE_TABLE_ID}"
+    response = requests.get(url, headers=HEADERS)
+
+    if response.status_code == 200:
+        return response.json().get("records", [])
+    else:
+        print(f"❌ Error fetching records: {response.status_code}, {response.text}")
+        return []
+
+def populate_table(new_table_name):
+    """Duplicate all records from 'Template' to the newly created table while excluding specified columns."""
+    records = get_table_records()
+
+    if not records:
+        print("❌ No records found to duplicate.")
+        return
+
+    new_records = []
+    
+    for record in records:
+        new_record_fields = {}
+        
+        for field_name, field_value in record["fields"].items():
+            if field_name in EXCLUDED_COLUMNS:
+                new_record_fields[field_name] = ""  # Keep header, remove values
+            else:
+                new_record_fields[field_name] = field_value  # Copy values
+                
+        new_records.append({"fields": new_record_fields})
+
+    url = f"{AIRTABLE_URL}/{new_table_name}"
+    payload = {"records": new_records}
+
+    response = requests.post(url, json=payload, headers=HEADERS)
+
+    if response.status_code == 200:
+        print(f"✅ Successfully populated table: {new_table_name}")
+    else:
+        print(f"❌ Error inserting records: {response.status_code}, {response.text}")
+
+# Run the script to create and populate the table
 create_new_table()
