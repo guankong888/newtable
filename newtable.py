@@ -48,7 +48,7 @@ def get_table_schema():
                             "choices": [
                                 {
                                     "name": choice["name"],
-                                    "color": choice.get("color", DEFAULT_COLOR)  # Ensure all choices have a color
+                                    "color": choice["color"] if "color" in choice else DEFAULT_COLOR
                                 }
                                 for choice in choices
                             ]
