@@ -1,6 +1,5 @@
 import requests
 import datetime
-import time
 
 # Airtable API Credentials
 AIRTABLE_BASE_ID = "appJrWoXe5H2YZnmU"
@@ -16,20 +15,6 @@ HEADERS = {
     "Content-Type": "application/json"
 }
 
-# List of Airtable supported colors for Select fields
-AIRTABLE_COLORS = [
-    "blueLight", "blueBright", "blueDark",
-    "cyanLight", "cyanBright", "cyanDark",
-    "tealLight", "tealBright", "tealDark",
-    "greenLight", "greenBright", "greenDark",
-    "yellowLight", "yellowBright", "yellowDark",
-    "orangeLight", "orangeBright", "orangeDark",
-    "redLight", "redBright", "redDark",
-    "pinkLight", "pinkBright", "pinkDark",
-    "purpleLight", "purpleBright", "purpleDark",
-    "grayLight", "grayBright", "grayDark"
-]
-
 def generate_table_name():
     """Generate table name in MM/DD-MM/DD/YYYY format for the current Monday and append 'Test'."""
     today = datetime.date.today()
@@ -38,7 +23,7 @@ def generate_table_name():
     return f"{monday.strftime('%m/%d')}-{sunday.strftime('%m/%d/%Y')} Test"
 
 def get_table_schema():
-    """Retrieve field types & options from the 'Template' table."""
+    """Retrieve field types & options (including colors) from the 'Template' table."""
     print("\n🔄 Fetching table schema...")
     response = requests.get(TABLES_API_URL, headers=HEADERS)
 
@@ -53,18 +38,20 @@ def get_table_schema():
                         "type": field["type"]
                     }
 
+                    # **Fix: Ensure Select Fields Retain Colors from Template**
                     if field["type"] in ["singleSelect", "multipleSelect"] and "options" in field:
                         choices = field["options"].get("choices", [])
                         field_schema["options"] = {
                             "choices": [
                                 {
                                     "name": choice["name"],
-                                    "color": choice.get("color", AIRTABLE_COLORS[i % len(AIRTABLE_COLORS)])
+                                    "color": choice["color"] if "color" in choice else "blueLight"
                                 } 
-                                for i, choice in enumerate(choices)
+                                for choice in choices
                             ]
                         }
 
+                    # Handle other field types
                     elif field["type"] == "number":
                         field_schema["options"] = {"precision": field["options"].get("precision", 1)}
 
@@ -118,27 +105,6 @@ def create_new_table():
         print(f"\n❌ Error creating table: {response.status_code}, {response.text}")
         return None
 
-def confirm_table_exists():
-    """Check if the newly created table actually exists."""
-    print("\n🔄 Confirming if the table was created successfully...")
-    response = requests.get(TABLES_API_URL, headers=HEADERS)
-
-    if response.status_code == 200:
-        tables = response.json().get("tables", [])
-        table_names = [table["name"] for table in tables]
-        print("\n📋 Current Tables in Base:")
-        for table in table_names:
-            print(f"   - {table}")
-        
-        new_table_name = generate_table_name()
-        if new_table_name in table_names:
-            print(f"\n✅ The table '{new_table_name}' was successfully created!")
-        else:
-            print(f"\n⚠️ Table '{new_table_name}' does NOT exist. Something went wrong!")
-    else:
-        print(f"❌ Error confirming table existence: {response.status_code}, {response.text}")
-
 # Run the script
 new_table_id = create_new_table()
-if new_table_id:
-    confirm_table_exists()
+
