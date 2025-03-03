@@ -1,11 +1,13 @@
 import requests
+import datetime
 
 # Airtable API Credentials
-AIRTABLE_BASE_ID = "appJrWoXe5H2YZnmU"  # Your Base ID
+AIRTABLE_BASE_ID = "appJrWoXe5H2YZnmU"  # Correct Base ID
 AIRTABLE_API_KEY = "patkcqbpm4M0Z7WTg.676db3c4059059a9f74e2714bced3e09fbacabe05bb17bfa7b29aa792b9a80e0"
+SOURCE_TABLE_ID = "tblZnkmYCBPNzv6rO"  # Table ID for "Template"
 
-# API URL for Creating Tables (Meta API)
-AIRTABLE_URL = f"https://api.airtable.com/v0/meta/bases/{AIRTABLE_BASE_ID}/tables"
+# Airtable API URL
+AIRTABLE_URL = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}"
 
 # Headers for authentication
 HEADERS = {
@@ -13,21 +15,53 @@ HEADERS = {
     "Content-Type": "application/json"
 }
 
-def create_test_table():
-    """Attempt to create a test table with correct schema."""
-    payload = {
-        "name": "TestTableCreation",
-        "fields": [
-            {"name": "TestField1", "type": "singleLineText"},
-            {"name": "TestField2", "type": "number", "options": {"precision": 1}}  # Fixed number field
-        ]
-    }
+def generate_table_name():
+    """Generate table name in MM/DD-MM/DD/YYYY format for the current Monday and append 'Test'."""
+    today = datetime.date.today()
+    monday = today - datetime.timedelta(days=today.weekday())  # Get Monday of the current week
+    sunday = monday + datetime.timedelta(days=6)  # Get Sunday of the same week
+    return f"{monday.strftime('%m/%d')}-{sunday.strftime('%m/%d/%Y')} Test"
 
-    response = requests.post(AIRTABLE_URL, json=payload, headers=HEADERS)
+def get_table_structure():
+    """Retrieve the structure (field names) from the 'Template' table."""
+    url = f"{AIRTABLE_URL}/{SOURCE_TABLE_ID}"
+    response = requests.get(url, headers=HEADERS)
 
     if response.status_code == 200:
-        print("✅ Successfully created table: TestTableCreation")
+        records = response.json().get("records", [])
+        if records:
+            fields = []
+            for field_name in records[0]["fields"].keys():
+                fields.append({"name": field_name, "type": "singleLineText"})  # Defaulting all fields to text
+            return fields
+        else:
+            print("❌ No records found in 'Template' table.")
+            return []
+    else:
+        print(f"❌ Error fetching table structure: {response.status_code}, {response.text}")
+        return []
+
+def create_new_table():
+    """Create a new table with the same structure as 'Template' and use date range in the name."""
+    new_table_name = generate_table_name()
+    fields = get_table_structure()
+
+    if not fields:
+        print("❌ No fields found. Table creation aborted.")
+        return
+
+    url = f"https://api.airtable.com/v0/meta/bases/{AIRTABLE_BASE_ID}/tables"
+    payload = {
+        "name": new_table_name,
+        "fields": fields
+    }
+
+    response = requests.post(url, json=payload, headers=HEADERS)
+
+    if response.status_code == 200:
+        print(f"✅ Successfully created table: {new_table_name} with Template structure")
     else:
         print(f"❌ Error creating table: {response.status_code}, {response.text}")
 
-create_test_table()
+# Run the script to create a new test table
+create_new_table()
