@@ -102,15 +102,19 @@ def populate_table(new_table_id):
                 
         new_records.append({"fields": new_record_fields})
 
-    url = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{new_table_id}"  # Use the new Table ID
-    payload = {"records": new_records}
+    # Split records into batches of 10
+    batch_size = 10
+    for i in range(0, len(new_records), batch_size):
+        batch = new_records[i:i+batch_size]
+        url = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{new_table_id}"  # Use the new Table ID
+        payload = {"records": batch}
 
-    response = requests.post(url, json=payload, headers=HEADERS)
+        response = requests.post(url, json=payload, headers=HEADERS)
 
-    if response.status_code == 200:
-        print(f"✅ Successfully populated table: {new_table_id}")
-    else:
-        print(f"❌ Error inserting records: {response.status_code}, {response.text}")
+        if response.status_code == 200:
+            print(f"✅ Successfully inserted batch {i // batch_size + 1} into table: {new_table_id}")
+        else:
+            print(f"❌ Error inserting batch {i // batch_size + 1}: {response.status_code}, {response.text}")
 
 # Run the script
 new_table_id = create_new_table()
