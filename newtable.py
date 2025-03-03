@@ -37,13 +37,20 @@ def get_table_schema():
                         "type": field["type"]
                     }
 
-                    # **Handle different field types**
+                    # **Handle Single Select & Multi Select Fields**
                     if field["type"] in ["singleSelect", "multipleSelect"] and "options" in field:
                         choices = field["options"].get("choices", [])
                         field_schema["options"] = {
-                            "choices": [{"name": choice["name"]} for choice in choices]  # Remove IDs
+                            "choices": [
+                                {
+                                    "name": choice["name"],
+                                    "color": choice.get("color", "blueLight")  # Assign default color if missing
+                                } 
+                                for choice in choices
+                            ]
                         }
 
+                    # Handle other field types
                     elif field["type"] == "number":
                         field_schema["options"] = {"precision": field["options"].get("precision", 1)}
 
