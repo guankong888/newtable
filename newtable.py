@@ -8,7 +8,7 @@ AIRTABLE_API_KEY = "patkcqbpm4M0Z7WTg.676db3c4059059a9f74e2714bced3e09fbacabe05b
 SOURCE_TABLE_ID = "tblZnkmYCBPNzv6rO"  # Table ID for "Template"
 
 # Columns to Exclude Values From (Headers will still be copied)
-EXCLUDED_COLUMNS = ["MF/FAIRE Order", "N2G Water", "SUPP RESTOCK", "Notes"]
+EXCLUDED_COLUMNS = ["MF/FAIRE Order", "N2G Water", "SUPP RESTOCK", "Notes", "Last Modified By"]
 
 # Airtable API URL
 AIRTABLE_URL = f"https://api.airtable.com/v0/meta/bases/{AIRTABLE_BASE_ID}/tables"
