@@ -50,4 +50,91 @@ def generate_table_name():
     today = datetime.date.today()
     monday = today - datetime.timedelta(days=today.weekday())
     sunday = monday + datetime.timedelta(days=6)
-    return f"{monday.strftime('%m/%d')}-{sunday.strftime
+    return f"{monday.strftime('%m/%d')}-{sunday.strftime('%m/%d/%Y')} Test"
+
+
+def get_table_schema():
+    """
+    Retrieve the schema for SOURCE_TABLE_ID from the base.
+    We'll debug the raw fields we see to ensure we're
+    capturing MF/FAIRE Order, etc.
+    """
+    print("\n===== FETCH TABLE SCHEMA =====")
+    resp = requests.get(TABLES_API_URL, headers=HEADERS)
+    if resp.status_code != 200:
+        print(f"❌ Error {resp.status_code} fetching table info: {resp.text}")
+        return []
+
+    data = resp.json().get("tables", [])
+    if not data:
+        print("No tables found at all in base!")
+        return []
+
+    # find the table by ID
+    for tbl in data:
+        tname = tbl.get("name", "NO_NAME")
+        tid = tbl.get("id", "NO_ID")
+        if tid == SOURCE_TABLE_ID:
+            print(f"\n✅ Found Template Table: {tname} (ID: {tid})")
+
+            # raw fields
+            raw_fields = tbl.get("fields", [])
+            print(f"🔎 RAW FIELDS from Template (count={len(raw_fields)}):")
+            for rf in raw_fields:
+                print(f"   → {rf}")
+
+            # build fields array (no modifications)
+            fields = []
+            for field in raw_fields:
+                fname = field.get("name")
+                ftype = field.get("type")
+                print(f"Processing field → Name: {fname}, Type: {ftype}")
+
+                field_schema = {
+                    "name": fname,
+                    "type": ftype
+                }
+                fields.append(field_schema)
+
+            print(f"Built a final fields list of length {len(fields)}!")
+            return fields
+
+    print(f"❌ Could not find table with ID={SOURCE_TABLE_ID} in the base!")
+    return []
+
+
+def create_new_table():
+    """
+    Attempt to create a new table with the final fields.
+    We'll see if we have color errors or if we end up with no fields.
+    """
+    new_table_name = generate_table_name()
+    fields = get_table_schema()
+
+    if not fields:
+        print("\n❌ No fields found. Table creation aborted.")
+        return
+
+    payload = {
+        "name": new_table_name,
+        "fields": fields
+    }
+
+    print(f"\n===== CREATE NEW TABLE: {new_table_name} =====")
+    resp = requests.post(TABLES_API_URL, json=payload, headers=HEADERS)
+    print("\n📢 API Response:")
+    print(resp.text)
+
+    if resp.status_code == 200:
+        new_table_id = resp.json().get("id")
+        print(f"\n✅ Successfully created table: {new_table_name} (ID: {new_table_id})")
+    else:
+        print(f"\n❌ Error creating table: {resp.status_code}, {resp.text}")
+
+
+if __name__ == "__main__":
+    # 1) list all tables first
+    list_all_tables()
+
+    # 2) attempt to create the new table
+    create_new_table()
